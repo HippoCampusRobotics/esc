@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+import rospy
+import smbus2
+from hippocampus_common.node import Node
+from esc import afro_esc
+
+
+class ESC(Node):
+    def __init__(self, name, anonymous=False, disable_signals=False):
+        super().__init__(name, anonymous, disable_signals)
+        self.bus = smbus2.SMBus(1)
+        self.rx_timeout = self.get_param("~rx_timeout", default=0.5)
+        self.i2c_base_address = self.get_param("~i2c_base_address",
+                                               default=0x29)
+        self.escs = self.detect_escs()
+
+    def detect_escs(self):
+        escs = {}
+        for i in range(8):
+            address = self.i2c_base_address + i
+            esc = afro_esc.AfroESC(self.bus, address)
+            if esc.verify_id():
+                escs[i] = esc
+                rospy.loginfo("Found ESC at address %s", hex(address))
+        return escs
+
+
+def main():
+    n = ESC("esc_commander")
+
+
+if __name__ == "__main__":
+    main()
