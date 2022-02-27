@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>esc</name>
   <version>0.0.0</version>
   <description>The control package</description>
@@ -18,18 +19,16 @@
 
   <author email="thies.lennart.alff@tuhh.de">Thies Lennart Alff</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>hippocampus_common</build_depend>
-  <build_depend>hippocampus_msgs</build_depend>
-  <build_export_depend>hippocampus_common</build_export_depend>
-  <build_export_depend>hippocampus_msgs</build_export_depend>
-  <exec_depend>hippocampus_common</exec_depend>
-  <exec_depend>hippocampus_msgs</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>python3-smbus2-pip</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

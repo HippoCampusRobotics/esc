@@ -1,33 +1,36 @@
-cmake_minimum_required(VERSION 3.0.2)
+# Guide to create mixed C++ and Python package
+# https://answers.ros.org/question/298740/ros2-c-and-python-in-same-package-is-it-possible/
+
+cmake_minimum_required(VERSION 3.5)
 project(esc)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  hippocampus_common
-  hippocampus_msgs
-  path_planning
-  dynamic_reconfigure
-)
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 
-catkin_python_setup()
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
+# find_package(catkin REQUIRED COMPONENTS
+#   hippocampus_common
+#   hippocampus_msgs
+#   path_planning
+#   dynamic_reconfigure
 # )
 
-catkin_package()
-
-include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
-)
+# include_directories(
+#   include
+# )
 
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+# Install Python executables
+install(PROGRAMS
   nodes/esc_commander
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
+
+ament_package()
