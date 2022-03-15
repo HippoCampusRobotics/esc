@@ -19,9 +19,9 @@ find_package(rclpy REQUIRED)
 #   dynamic_reconfigure
 # )
 
-# include_directories(
-#   include
-# )
+include_directories(
+  include
+)
 
 
 # Install Python modules
