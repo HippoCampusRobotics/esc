@@ -2,5 +2,5 @@
 
 class ESCBase {
  public:
-  virtual bool SetMotorSpeed(double speed);
+  virtual int WriteMotorSpeed() = 0;
 };

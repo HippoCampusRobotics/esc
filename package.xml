@@ -25,6 +25,7 @@
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>python3-smbus2-pip</depend>
+  <depend>hippo_interfaces</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

@@ -22,16 +22,30 @@ class AfroESC : public ESCBase {
   int i2c_handle_;
   int i2c_address_;
   int pole_pairs_;
+  bool available_;
+  int index_;
+  double speed_;
+  bool in_use_;
 
  public:
   AfroESC(const int _i2c_handle, const int _i2c_address,
           const int _pole_pairs = 6);
-  bool SetMotorSpeed(double speed);
-  int GetMotorComCounter();
+  int WriteMotorSpeed();
+  void Reset(int _i2c_handle, int _i2c_address);
+  void SetMotorSpeed(double _speed);
+  int ReadMotorComCounter();
   double GetMotorRevCounter();
-  int GetBatteryAdc();
+  int ReadBatteryAdc();
   double GetBatteryVoltage();
-  int GetTemperatureAdc();
-  int GetID();
+  int ReadTemperatureAdc();
+  int ReadId(int *id);
   bool VerifyID();
+  bool available();
+  void SetAvailable(bool available);
+  void SetIndex(int index);
+  int index();
+  void SetAddress(int _address);
+  int address();
+  bool InUse();
+  void SetInUse(bool _in_use);
 };
