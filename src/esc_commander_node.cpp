@@ -30,7 +30,8 @@ class ESC : public rclcpp::Node {
     }
     InitEscs();
     InitParams();
-    paramter_callback_handle_ = add_on_set_parameters_callback(std::bind(&ESC::onSetParameters, this, _1));
+    paramter_callback_handle_ = add_on_set_parameters_callback(
+        std::bind(&ESC::onSetParameters, this, _1));
     control_timeout_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::seconds(1),
                              std::bind(&ESC::onTimeout, this));
@@ -66,8 +67,7 @@ class ESC : public rclcpp::Node {
     for (int i = 0; i < msg->control.size(); i++) {
       if (msg->control[i] != 0 && !escs_[i].InUse()) {
         RCLCPP_WARN(get_logger(),
-                    "Setting non-zero thrust for unused ESC at index %d!",
-                    i);
+                    "Setting non-zero thrust for unused ESC at index %d!", i);
       }
       escs_[i].SetMotorSpeed(msg->control[i]);
     }
@@ -213,7 +213,8 @@ class ESC : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr send_thrust_timer_;
   rclcpp::Subscription<hippo_interfaces::msg::ActuatorControls>::SharedPtr
       actuator_controls_sub_;
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr paramter_callback_handle_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
+      paramter_callback_handle_;
 };
 
 int main(int argc, char **argv) {
