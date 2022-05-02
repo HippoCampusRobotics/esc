@@ -16,8 +16,8 @@ class ESC : public rclcpp::Node {
   ESC()
       : Node("esc_commander"),
         i2c_addresses_(8),
-        i2c_device_("/dev/i2c-1"),
-        timed_out_(false) {
+        timed_out_(false),
+        i2c_device_("/dev/i2c-1") {
     Init();
   }
   void Init() {
@@ -34,7 +34,7 @@ class ESC : public rclcpp::Node {
         std::bind(&ESC::onSetParameters, this, _1));
     control_timeout_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::seconds(1),
-                             std::bind(&ESC::onTimeout, this));
+                             std::bind(&ESC::OnTimeout, this));
     send_thrust_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::milliseconds(20),
                              std::bind(&ESC::OnSendThrusts, this));
@@ -44,10 +44,10 @@ class ESC : public rclcpp::Node {
             "thruster_controls", 10,
             std::bind(&ESC::OnThrusterControls, this, _1));
   }
-  void onTimeout() {
+  void OnTimeout() {
     RCLCPP_WARN(get_logger(), "Thruster controls timed out.");
     for (auto &esc : escs_) {
-      esc.SetMotorSpeed(0.0);
+      esc.SetThrottle(0.0);
     }
     SendThrusts(true);
     timed_out_ = true;
@@ -64,18 +64,18 @@ class ESC : public rclcpp::Node {
       SetAllThrusts(0.0);
       SendThrusts(true);
     }
-    for (int i = 0; i < msg->control.size(); i++) {
+    for (int i = 0; i < static_cast<int>(msg->control.size()); i++) {
       if (msg->control[i] != 0 && !escs_[i].InUse()) {
         RCLCPP_WARN(get_logger(),
                     "Setting non-zero thrust for unused ESC at index %d!", i);
       }
-      escs_[i].SetMotorSpeed(msg->control[i]);
+      escs_[i].SetThrottle(msg->control[i]);
     }
   }
 
   void SetAllThrusts(double _thrust) {
     for (auto &esc : escs_) {
-      esc.SetMotorSpeed(_thrust);
+      esc.SetThrottle(_thrust);
     }
   }
 
@@ -85,7 +85,7 @@ class ESC : public rclcpp::Node {
       return 0;
     }
     for (auto &esc : escs_) {
-      if (esc.available() && esc.WriteMotorSpeed() < 0) {
+      if (esc.available() && (esc.WriteThrottle() != EscRetCode::kOk)) {
         RCLCPP_ERROR(get_logger(),
                      "Failed to set motor speed for thruster %d at address %X",
                      esc.index(), esc.address());
@@ -122,11 +122,11 @@ class ESC : public rclcpp::Node {
       const std::vector<rclcpp::Parameter> &parameters) {
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
-    bool param_valid;
     for (const auto &param : parameters) {
-      param_valid = true;
-      RCLCPP_INFO(get_logger(), "Received parameter: %s", param.get_name());
+      RCLCPP_INFO(get_logger(), "Received parameter: %s", param.get_name().c_str());
       if (param.get_name() == "i2c_addresses") {
+        bool param_valid;
+        param_valid = true;
         RCLCPP_INFO(get_logger(), "Setting i2c_addresses.");
         try {
           if (param.as_integer_array().size() != 8) {
@@ -159,12 +159,9 @@ class ESC : public rclcpp::Node {
   void InitEscs() {
     RCLCPP_INFO(get_logger(), "Init ESCs....");
     int i = 0;
-    escs_.clear();
-    for (int i = 0; i < 8; i++) {
-      escs_.push_back(AfroESC(i2c_handle_, 0));
-      escs_.back().SetAvailable(false);
-      escs_.back().SetInUse(false);
-      escs_.back().SetMotorSpeed(0.0);
+    for (auto const &address : i2c_addresses_) {
+      escs_[i].Reset(i2c_handle_, address);
+      ++i;
     }
   }
 
@@ -183,12 +180,16 @@ class ESC : public rclcpp::Node {
   void DetectEscs() {
     RCLCPP_INFO(get_logger(), "Detecting ESCs...");
     bool failed = false;
+
     for (auto &esc : escs_) {
       if (!esc.InUse()) {
         RCLCPP_INFO(get_logger(), "ESC %d unused.", esc.index());
         continue;
       }
-      if (!esc.VerifyID()) {
+      bool ok = false;
+      EscRetCode status;
+      status = esc.VerifyID(ok);
+      if (!((status == EscRetCode::kOk) && ok)) {
         RCLCPP_ERROR(get_logger(), "Could not find ESC at address %X",
                      esc.address());
         esc.SetAvailable(false);
@@ -203,10 +204,11 @@ class ESC : public rclcpp::Node {
   }
 
  private:
+  static constexpr int kNumEscs = 8;
   std::vector<int64_t> i2c_addresses_;
   bool esc_config_valid_;
   bool timed_out_;
-  std::vector<AfroESC> escs_;
+  std::array<AfroESC, kNumEscs> escs_;
   std::string i2c_device_;
   int i2c_handle_;
   rclcpp::TimerBase::SharedPtr control_timeout_timer_;

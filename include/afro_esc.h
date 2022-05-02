@@ -24,25 +24,33 @@ class AfroESC : public ESCBase {
   int pole_pairs_;
   bool available_;
   int index_;
-  double speed_;
+  double throttle_;
   bool in_use_;
+  double revolution_count_;
+  int commutation_count_;
+  int battery_adc_;
+  double battery_voltage_;
+
+  EscRetCode ReadWordData(int _reg_address, int &_data);
+  EscRetCode WriteWordData(int _reg_address, int data);
 
  public:
-  AfroESC(const int _i2c_handle, const int _i2c_address,
+  AfroESC(const int _i2c_handle=0, const int _i2c_address=0,
           const int _pole_pairs = 6);
-  int WriteMotorSpeed();
-  void Reset(int _i2c_handle, int _i2c_address);
-  void SetMotorSpeed(double _speed);
-  int ReadMotorComCounter();
-  double GetMotorRevCounter();
-  int ReadBatteryAdc();
+  EscRetCode WriteThrottle();
+  EscRetCode Reset(int _i2c_handle, int _i2c_address);
+  void SetThrottle(double _throttle);
+  EscRetCode UpdateRevolutionCount();
+  int GetCommutationCount();
+  double GetRevolutionCount();
+  EscRetCode UpdateBatteryAdc();
   double GetBatteryVoltage();
-  int ReadTemperatureAdc();
-  int ReadId(int *id);
-  bool VerifyID();
+  EscRetCode UpdateTemperatureAdc();
+  EscRetCode ReadId(int &_id);
+  EscRetCode VerifyID(bool &_is_ok);
   bool available();
-  void SetAvailable(bool available);
-  void SetIndex(int index);
+  void  SetAvailable(bool available);
+  void  SetIndex(int index);
   int index();
   void SetAddress(int _address);
   int address();

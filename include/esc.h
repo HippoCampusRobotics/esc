@@ -1,6 +1,5 @@
 #pragma once
 
-class ESCBase {
- public:
-  virtual int WriteMotorSpeed() = 0;
-};
+enum class EscRetCode { kOk = 0, kIOError };
+
+class ESCBase {};

@@ -9,51 +9,141 @@
 
 AfroESC::AfroESC(const int _i2c_handle, const int _i2c_address,
                  const int _pole_pairs)
-    : available_(false), in_use_(false) {
+    : available_(false),
+      in_use_(false),
+      revolution_count_(0.0),
+      commutation_count_(0) {
   i2c_handle_ = _i2c_handle;
   i2c_address_ = _i2c_address;
   pole_pairs_ = _pole_pairs;
 }
 
-void AfroESC::Reset(int _i2c_handle, int _i2c_address) {
+EscRetCode AfroESC::WriteWordData(int _reg_address, int _data) {
+  uint8_t buf[3];
+  struct i2c_msg msg;
+  struct i2c_rdwr_ioctl_data ioctl_data;
+
+  buf[0] = static_cast<uint8_t>(_reg_address);
+  buf[1] = static_cast<uint8_t>((_data >> 8) & 0xFF);
+  buf[2] = static_cast<uint8_t>(_data & 0xFF);
+  msg.addr = i2c_address_;
+  msg.flags = 0;
+  msg.len = sizeof(buf) / sizeof(buf[0]);
+  msg.buf = buf;
+
+  ioctl_data.msgs = &msg;
+  ioctl_data.nmsgs = 1;
+
+  if (ioctl(i2c_handle_, I2C_RDWR, ioctl_data) < 0) {
+    return EscRetCode::kIOError;
+  }
+  return EscRetCode::kOk;
+}
+
+EscRetCode AfroESC::ReadWordData(int _reg_address, int &_data) {
+  uint8_t buf[2];
+  struct i2c_msg msgs[2];
+  struct i2c_rdwr_ioctl_data msgset[1];
+
+  buf[0] = static_cast<uint8_t>(_reg_address);
+
+  msgs[0].addr = i2c_address_;
+  msgs[0].flags = 0;
+  msgs[0].len = 1;
+  msgs[0].buf = buf;
+
+  msgs[1].addr = i2c_address_;
+  msgs[1].flags = I2C_M_NOSTART | I2C_M_RD;
+  msgs[1].len = sizeof(buf) / sizeof(buf[0]);
+  msgs[1].buf = buf;
+
+  msgset[0].msgs = msgs;
+  msgset[0].nmsgs = sizeof(msgs) / sizeof(msgs[0]);
+
+  if (ioctl(i2c_handle_, I2C_RDWR, msgset) < 0) {
+    return EscRetCode::kIOError;
+  }
+  _data = buf[0] << 8 | buf[1];
+  return EscRetCode::kOk;
+}
+
+EscRetCode AfroESC::Reset(int _i2c_handle, int _i2c_address) {
   i2c_handle_ = _i2c_handle;
   i2c_address_ = _i2c_address;
   available_ = false;
   in_use_ = false;
+  throttle_ = 0.0;
+  battery_adc_ = 0;
+  battery_voltage_ = 0.0;
+  commutation_count_ = 0;
+  revolution_count_ = 0.0;
+  return EscRetCode::kOk;
 }
 
-int AfroESC::WriteMotorSpeed() {
-  int result;
-  double speed = speed_;
-  uint16_t speed_data = 0;
-  if (speed < 0) {
-    speed = -1 * speed_;
+EscRetCode AfroESC::WriteThrottle() {
+  double throttle = throttle_;
+  int speed_data = 0;
+  if (throttle < 0) {
+    throttle = -1 * throttle_;
     speed_data += kInvertDirection;
   }
 
-  speed_data += (int)(kMaxSpeed * speed);
-  uint8_t data[] = {kRegSetSpeed, (uint8_t)(0xFF & (speed_data >> 8)),
-                    (uint8_t)(speed_data & 0xFF)};
-  struct i2c_msg msg = {(uint8_t)i2c_address_, 0, sizeof(data), data};
-  struct i2c_rdwr_ioctl_data ioctl_data = {&msg, 1};
-  if (ioctl(i2c_handle_, I2C_RDWR, &ioctl_data) != 1) {
-    return false;
-  }
-  return true;
-}
-void AfroESC::SetMotorSpeed(double _speed) {
-  speed_ = std::min(std::max(_speed, -1.0), 1.0);
+  speed_data += (int)(kMaxSpeed * throttle);
+  return WriteWordData(kRegSetSpeed, speed_data);
 }
 
-int AfroESC::ReadMotorComCounter() { return 0; }
-double AfroESC::GetMotorRevCounter() { return 0; }
-int AfroESC::ReadBatteryAdc() { return 0; }
-double AfroESC::GetBatteryVoltage() { return 0; }
-int AfroESC::ReadTemperatureAdc() { return 0; }
-int AfroESC::ReadId(int *id) {
+void AfroESC::SetThrottle(double _throttle) {
+  throttle_ = std::min(std::max(_throttle, -1.0), 1.0);
+}
+
+EscRetCode AfroESC::UpdateRevolutionCount() {
+  uint8_t buf[2];
+  struct i2c_msg msgs[2];
+  struct i2c_rdwr_ioctl_data msgset[1];
+  msgs[0].addr = i2c_address_;
+  msgs[0].flags = 0;
+  msgs[0].len = sizeof(buf) / sizeof(buf[0]);
+  msgs[0].buf = buf;
+
+  msgs[1].addr = i2c_address_;
+  msgs[1].flags = I2C_M_NOSTART | I2C_M_RD;
+  msgs[1].len = sizeof(buf) / sizeof(buf[0]);
+  msgs[1].buf = buf;
+  msgset[0].msgs = msgs;
+  msgset[0].nmsgs = sizeof(msgs) / sizeof(msgs[0]);
+  if (ioctl(i2c_handle_, I2C_RDWR, msgset) < 0) {
+    return EscRetCode::kIOError;
+  }
+  commutation_count_ = buf[0] << 8 | buf[1];
+  revolution_count_ = static_cast<double>(commutation_count_) / pole_pairs_;
+  return EscRetCode::kOk;
+}
+
+int AfroESC::GetCommutationCount() { return commutation_count_; }
+
+double AfroESC::GetRevolutionCount() { return revolution_count_; }
+
+EscRetCode AfroESC::UpdateBatteryAdc() {
+  EscRetCode status;
+  status = ReadWordData(kRegGetVbat, battery_adc_);
+  if (status != EscRetCode::kOk) {
+    return status;
+  }
+  // weird bit-shifting needed due to 10bit adc resolution
+  battery_adc_ = (battery_adc_ & 0xFF00) | ((battery_adc_ & 0xFF) >> 6);
+  battery_voltage_ = battery_adc_ * kAdcVbatScaler;
+  return EscRetCode::kOk;
+}
+
+double AfroESC::GetBatteryVoltage() { return battery_voltage_; }
+EscRetCode AfroESC::UpdateTemperatureAdc() { return EscRetCode::kOk; }
+EscRetCode AfroESC::ReadId(int &_id) {
   uint8_t buf[1];
   struct i2c_msg msgs[2];
   struct i2c_rdwr_ioctl_data msgset[1];
+
+  buf[0] = kRegGetId;
+
   msgs[0].addr = i2c_address_;
   msgs[0].flags = 0;
   msgs[0].len = sizeof(buf) / sizeof(buf[0]);
@@ -67,20 +157,24 @@ int AfroESC::ReadId(int *id) {
   msgset[0].msgs = msgs;
   msgset[0].nmsgs = sizeof(msgs) / sizeof(msgs[0]);
   if (ioctl(i2c_handle_, I2C_RDWR, msgset) < 0) {
-    return -1;
+    return EscRetCode::kIOError;
   }
-  *id = buf[0];
-  return 0;
+  _id = static_cast<int>(buf[0]);
+  return EscRetCode::kOk;
 }
-bool AfroESC::VerifyID() {
+
+EscRetCode AfroESC::VerifyID(bool &_is_ok) {
   int id;
-  if (ReadId(&id) < 0) {
+  EscRetCode status = ReadId(id);
+  if (status != EscRetCode::kOk) {
     SetAvailable(false);
-    return false;
+    return status;
   }
   SetAvailable(kId == id);
-  return (kId == id);
+  _is_ok = kId == id;
+  return EscRetCode::kOk;
 }
+
 bool AfroESC::available() { return available_; }
 void AfroESC::SetAvailable(bool available) { available_ = available; }
 void AfroESC::SetIndex(int index) { index_ = index; }
