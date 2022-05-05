@@ -2,9 +2,16 @@
 #include <fcntl.h>
 
 #include <hippo_interfaces/msg/actuator_controls.hpp>
+#include <hippo_interfaces/msg/detail/esc_info__struct.hpp>
+#include <hippo_interfaces/msg/detail/esc_rpms__struct.hpp>
+#include <hippo_interfaces/msg/detail/esc_voltages__struct.hpp>
+#include <hippo_interfaces/msg/esc_rpms.hpp>
+#include <hippo_interfaces/msg/esc_voltages.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
+#include <rclcpp/create_timer.hpp>
+#include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "afro_esc.h"
@@ -32,12 +39,25 @@ class ESC : public rclcpp::Node {
     InitParams();
     paramter_callback_handle_ = add_on_set_parameters_callback(
         std::bind(&ESC::onSetParameters, this, _1));
+
+    esc_voltage_pub_ =
+        this->create_publisher<hippo_interfaces::msg::EscVoltages>(
+            "esc_voltages", 50);
+
+    esc_rpm_pub_ =
+        this->create_publisher<hippo_interfaces::msg::EscRpms>("esc_rpms", 50);
+
     control_timeout_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::seconds(1),
                              std::bind(&ESC::OnTimeout, this));
+
     send_thrust_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::milliseconds(20),
                              std::bind(&ESC::OnSendThrusts, this));
+
+    read_battery_timer_ =
+        rclcpp::create_timer(this, get_clock(), std::chrono::milliseconds(1000),
+                             std::bind(&ESC::OnReadBattery, this));
 
     actuator_controls_sub_ =
         create_subscription<hippo_interfaces::msg::ActuatorControls>(
@@ -55,6 +75,26 @@ class ESC : public rclcpp::Node {
   }
 
   void OnSendThrusts() { SendThrusts(); }
+
+  void OnReadBattery() {
+    auto msg = hippo_interfaces::msg::EscVoltages();
+    int i = 0;
+
+    // either fill data with valid voltages or NaN if communication failed
+    for (auto &esc : escs_) {
+      if (esc.available() && (esc.UpdateBatteryAdc() != EscRetCode::kOk)) {
+        RCLCPP_ERROR(get_logger(),
+                     "Failed to read voltage from thruster %d at address %X",
+                     esc.index(), esc.address());
+        msg.data[i] = std::numeric_limits<double>::quiet_NaN();
+      } else {
+        msg.data[i] = esc.GetBatteryVoltage();
+      }
+      ++i;
+    }
+
+    esc_voltage_pub_->publish(msg);
+  }
 
   void OnThrusterControls(
       const hippo_interfaces::msg::ActuatorControls::SharedPtr msg) {
@@ -81,17 +121,30 @@ class ESC : public rclcpp::Node {
 
   int SendThrusts(bool force = false) {
     int ret = 0;
+    auto msg = hippo_interfaces::msg::EscRpms();
+    int i=0;
     if (timed_out_ && !force) {
       return 0;
     }
     for (auto &esc : escs_) {
-      if (esc.available() && (esc.WriteThrottle() != EscRetCode::kOk)) {
+      if (esc.available()) {
+        if (esc.WriteThrottle() != EscRetCode::kOk) {
         RCLCPP_ERROR(get_logger(),
                      "Failed to set motor speed for thruster %d at address %X",
                      esc.index(), esc.address());
         ret = -1;
+        }
+        if (esc.UpdateRevolutionCount() != EscRetCode::kOk) {
+            RCLCPP_ERROR(get_logger(), "Failed to read rpm from thruster %d at address %X", esc.index(), esc.address());
+            msg.rpms[i] = std::numeric_limits<double>::quiet_NaN();
+            msg.revolutions[i] = std::numeric_limits<int64_t>::quiet_NaN();
+        }else {
+          msg.revolutions[i] = esc.GetRevolutionCount();
+        }
       }
+      ++i;
     }
+    esc_rpm_pub_->publish(msg);
     return ret;
   }
 
@@ -213,10 +266,13 @@ class ESC : public rclcpp::Node {
   int i2c_handle_;
   rclcpp::TimerBase::SharedPtr control_timeout_timer_;
   rclcpp::TimerBase::SharedPtr send_thrust_timer_;
+  rclcpp::TimerBase::SharedPtr read_battery_timer_;
   rclcpp::Subscription<hippo_interfaces::msg::ActuatorControls>::SharedPtr
       actuator_controls_sub_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
       paramter_callback_handle_;
+  rclcpp::Publisher<hippo_interfaces::msg::EscVoltages>::SharedPtr esc_voltage_pub_;
+  rclcpp::Publisher<hippo_interfaces::msg::EscRpms>::SharedPtr esc_rpm_pub_;
 };
 
 int main(int argc, char **argv) {
