@@ -1,5 +1,5 @@
 #pragma once
 
-enum class EscRetCode { kOk = 0, kIOError };
+enum class EscRetCode { kOk = 0, kIOError, kWrongId };
 
 class ESCBase {};

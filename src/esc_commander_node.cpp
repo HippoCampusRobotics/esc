@@ -240,8 +240,8 @@ class ESC : public rclcpp::Node {
       EscRetCode status;
       status = esc.VerifyID(ok);
       if (!((status == EscRetCode::kOk) && ok)) {
-        RCLCPP_ERROR(get_logger(), "Could not find ESC at address %X",
-                     esc.address());
+        RCLCPP_ERROR(get_logger(), "Could not find ESC at address %X. Error code %d",
+                     esc.address(), static_cast<int>(status));
         esc.SetAvailable(false);
         failed = true;
       } else {
