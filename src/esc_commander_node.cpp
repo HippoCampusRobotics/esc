@@ -134,9 +134,11 @@ class ESC : public rclcpp::Node {
         if (esc.UpdateRevolutionCount() != EscRetCode::kOk) {
             RCLCPP_ERROR(get_logger(), "Failed to read rpm from thruster %d at address %X", esc.index(), esc.address());
             msg.rpms[i] = std::numeric_limits<double>::quiet_NaN();
-            msg.revolutions[i] = std::numeric_limits<int64_t>::quiet_NaN();
+            msg.commutations[i] = std::numeric_limits<int64_t>::quiet_NaN();
+            msg.revolutions[i] = std::numeric_limits<double>::quiet_NaN();
         }else {
           msg.revolutions[i] = esc.GetRevolutionCount();
+          msg.commutations[i] = esc.GetCommutationCount();
         }
       }
       ++i;
