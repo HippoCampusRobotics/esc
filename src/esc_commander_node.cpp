@@ -2,9 +2,6 @@
 #include <fcntl.h>
 
 #include <hippo_interfaces/msg/actuator_controls.hpp>
-#include <hippo_interfaces/msg/detail/esc_info__struct.hpp>
-#include <hippo_interfaces/msg/detail/esc_rpms__struct.hpp>
-#include <hippo_interfaces/msg/detail/esc_voltages__struct.hpp>
 #include <hippo_interfaces/msg/esc_rpms.hpp>
 #include <hippo_interfaces/msg/esc_voltages.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
