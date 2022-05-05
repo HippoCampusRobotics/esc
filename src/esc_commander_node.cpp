@@ -33,9 +33,11 @@ class ESC : public rclcpp::Node {
       exit(1);
     }
     InitEscs();
-    InitParams();
     paramter_callback_handle_ = add_on_set_parameters_callback(
         std::bind(&ESC::onSetParameters, this, _1));
+    InitParams();
+    UpdateAddresses();
+    DetectEscs();
 
     esc_voltage_pub_ =
         this->create_publisher<hippo_interfaces::msg::EscVoltages>(
