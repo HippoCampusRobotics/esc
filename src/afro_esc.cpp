@@ -34,7 +34,7 @@ EscRetCode AfroESC::WriteWordData(int _reg_address, int _data) {
   ioctl_data.msgs = &msg;
   ioctl_data.nmsgs = 1;
 
-  if (ioctl(i2c_handle_, I2C_RDWR, ioctl_data) < 0) {
+  if (ioctl(i2c_handle_, I2C_RDWR, &ioctl_data) < 0) {
     return EscRetCode::kIOError;
   }
   return EscRetCode::kOk;
@@ -137,6 +137,7 @@ EscRetCode AfroESC::UpdateBatteryAdc() {
 
 double AfroESC::GetBatteryVoltage() { return battery_voltage_; }
 EscRetCode AfroESC::UpdateTemperatureAdc() { return EscRetCode::kOk; }
+
 EscRetCode AfroESC::ReadId(int &_id) {
   uint8_t buf[1];
   struct i2c_msg msgs[2];
