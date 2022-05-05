@@ -97,24 +97,11 @@ void AfroESC::SetThrottle(double _throttle) {
 }
 
 EscRetCode AfroESC::UpdateRevolutionCount() {
-  uint8_t buf[2];
-  struct i2c_msg msgs[2];
-  struct i2c_rdwr_ioctl_data msgset[1];
-  msgs[0].addr = i2c_address_;
-  msgs[0].flags = 0;
-  msgs[0].len = sizeof(buf) / sizeof(buf[0]);
-  msgs[0].buf = buf;
-
-  msgs[1].addr = i2c_address_;
-  msgs[1].flags = I2C_M_NOSTART | I2C_M_RD;
-  msgs[1].len = sizeof(buf) / sizeof(buf[0]);
-  msgs[1].buf = buf;
-  msgset[0].msgs = msgs;
-  msgset[0].nmsgs = sizeof(msgs) / sizeof(msgs[0]);
-  if (ioctl(i2c_handle_, I2C_RDWR, msgset) < 0) {
-    return EscRetCode::kIOError;
+    EscRetCode status;
+    status = ReadWordData(kRegGetSpeed, commutation_count_);
+  if (status != EscRetCode::kOk) {
+    return status;
   }
-  commutation_count_ = buf[0] << 8 | buf[1];
   revolution_count_ = static_cast<double>(commutation_count_) / pole_pairs_;
   return EscRetCode::kOk;
 }
@@ -130,7 +117,7 @@ EscRetCode AfroESC::UpdateBatteryAdc() {
     return status;
   }
   // weird bit-shifting needed due to 10bit adc resolution
-  battery_adc_ = (battery_adc_ & 0xFF00) | ((battery_adc_ & 0xFF) >> 6);
+  battery_adc_ >>= 6;  
   battery_voltage_ = battery_adc_ * kAdcVbatScaler;
   return EscRetCode::kOk;
 }
