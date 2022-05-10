@@ -34,7 +34,7 @@ class AfroESC(object):
         self.set_motor_speed(0)
 
     def set_motor_speed(self, speed):
-        """Set the motor speed by an arbitrary speed unit. 
+        """Set the motor speed by an arbitrary speed unit.
 
         This is most likely by far not proportional to the motor's RPM.
 
@@ -76,15 +76,18 @@ class AfroESC(object):
         return (data[0] << 8 | data[1]) / self._pole_pairs
 
     def get_battery_adc(self) -> int:
-        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_VBAT, 2)
+        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_VBAT,
+                                             2)
         return int((data[0] << 8 | data[1]) >> 6)
 
     def get_battery_voltage(self) -> float:
-        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_VBAT, 2)
+        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_VBAT,
+                                             2)
         return ((data[0] << 8 | data[1]) >> 6) * self.ADC_VBAT_SCALER
 
     def get_temperature_adc(self) -> int:
-        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_TEMP, 2)
+        data = self._bus.read_i2c_block_data(self.address, self.REG_GET_TEMP,
+                                             2)
         return int(data[0] << 8 | data[1])
 
     def get_id(self) -> int:
@@ -103,6 +106,7 @@ class AfroESC(object):
 
 
 def main():
+    # pylint: disable=import-outside-toplevel
     import time
     bus = smbus2.SMBus(1)
     esc = AfroESC(bus, 0x29)
@@ -112,14 +116,14 @@ def main():
     for speed in speeds:
         print("Set speed: {}".format(speed))
         esc.get_motor_rev_counter()
-        t1 = time.time()
+        time1 = time.time()
         loop_start = time.time()
         while time.time() - loop_start < 2.0:
             esc.set_motor_speed(speed)
             time.sleep(0.01)
         cnt = esc.get_motor_rev_counter()
-        t2 = time.time()
-        print(cnt / (t2 - t1) * 60.0)
+        time2 = time.time()
+        print(cnt / (time2 - time1) * 60.0)
 
 
 if __name__ == "__main__":
