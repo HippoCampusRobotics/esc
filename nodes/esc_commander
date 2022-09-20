@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 
 from esc import afro_esc
-from hippo_interfaces.msg import ActuatorControls, Float64Stamped
+from hippo_msgs.msg import ActuatorControls, Float64Stamped
 
 
 class ESC(Node):
@@ -41,7 +41,7 @@ class ESC(Node):
                                                      1)
         self.send_thrust_timer = self.create_timer(1 / 50, self.send_thrusts)
         self.read_rpm_timer = self.create_timer(1 / 10, self.read_rpm_counter)
-        self.read_vbat = self.create_timer(1.0, self.read_vbat)
+        self.read_vbat_timer = self.create_timer(1.0, self.read_vbat)
         self.timeout_timer = self.create_timer(self.rx_timeout, self.on_timeout)
 
     def read_vbat(self):
