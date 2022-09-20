@@ -11,7 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
-find_package(hippo_interfaces REQUIRED)
+find_package(hippo_msgs REQUIRED)
 
 # find_package(catkin REQUIRED COMPONENTS
 #   hippocampus_common
@@ -29,7 +29,7 @@ include_directories(
 ament_python_install_package(${PROJECT_NAME})
 
 add_executable(esc_commander_node src/esc_commander_node.cpp src/afro_esc.cpp)
-ament_target_dependencies(esc_commander_node rclcpp hippo_interfaces)
+ament_target_dependencies(esc_commander_node rclcpp hippo_msgs)
 
 # Install Python executables
 install(PROGRAMS

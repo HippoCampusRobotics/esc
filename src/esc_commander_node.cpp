@@ -1,9 +1,9 @@
 
 #include <fcntl.h>
 
-#include <hippo_interfaces/msg/actuator_controls.hpp>
-#include <hippo_interfaces/msg/esc_rpms.hpp>
-#include <hippo_interfaces/msg/esc_voltages.hpp>
+#include <hippo_msgs/msg/actuator_controls.hpp>
+#include <hippo_msgs/msg/esc_rpms.hpp>
+#include <hippo_msgs/msg/esc_voltages.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
@@ -38,11 +38,11 @@ class ESC : public rclcpp::Node {
     InitParams();
 
     esc_voltage_pub_ =
-        this->create_publisher<hippo_interfaces::msg::EscVoltages>(
+        this->create_publisher<hippo_msgs::msg::EscVoltages>(
             "esc_voltages", 50);
 
     esc_rpm_pub_ =
-        this->create_publisher<hippo_interfaces::msg::EscRpms>("esc_rpms", 50);
+        this->create_publisher<hippo_msgs::msg::EscRpms>("esc_rpms", 50);
 
     control_timeout_timer_ =
         rclcpp::create_timer(this, get_clock(), std::chrono::seconds(1),
@@ -57,7 +57,7 @@ class ESC : public rclcpp::Node {
                              std::bind(&ESC::OnReadBattery, this));
 
     actuator_controls_sub_ =
-        create_subscription<hippo_interfaces::msg::ActuatorControls>(
+        create_subscription<hippo_msgs::msg::ActuatorControls>(
             "thruster_controls", 10,
             std::bind(&ESC::OnThrusterControls, this, _1));
   }
@@ -74,7 +74,7 @@ class ESC : public rclcpp::Node {
   void OnSendThrusts() { SendThrusts(); }
 
   void OnReadBattery() {
-    auto msg = hippo_interfaces::msg::EscVoltages();
+    auto msg = hippo_msgs::msg::EscVoltages();
     int i = 0;
 
     // either fill data with valid voltages or NaN if communication failed
@@ -94,7 +94,7 @@ class ESC : public rclcpp::Node {
   }
 
   void OnThrusterControls(
-      const hippo_interfaces::msg::ActuatorControls::SharedPtr msg) {
+      const hippo_msgs::msg::ActuatorControls::SharedPtr msg) {
     control_timeout_timer_->reset();
     if (timed_out_) {
       timed_out_ = false;
@@ -118,7 +118,7 @@ class ESC : public rclcpp::Node {
 
   int SendThrusts(bool force = false) {
     int ret = 0;
-    auto msg = hippo_interfaces::msg::EscRpms();
+    auto msg = hippo_msgs::msg::EscRpms();
     int i=0;
     if (timed_out_ && !force) {
       return 0;
@@ -266,12 +266,12 @@ class ESC : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr control_timeout_timer_;
   rclcpp::TimerBase::SharedPtr send_thrust_timer_;
   rclcpp::TimerBase::SharedPtr read_battery_timer_;
-  rclcpp::Subscription<hippo_interfaces::msg::ActuatorControls>::SharedPtr
+  rclcpp::Subscription<hippo_msgs::msg::ActuatorControls>::SharedPtr
       actuator_controls_sub_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
       paramter_callback_handle_;
-  rclcpp::Publisher<hippo_interfaces::msg::EscVoltages>::SharedPtr esc_voltage_pub_;
-  rclcpp::Publisher<hippo_interfaces::msg::EscRpms>::SharedPtr esc_rpm_pub_;
+  rclcpp::Publisher<hippo_msgs::msg::EscVoltages>::SharedPtr esc_voltage_pub_;
+  rclcpp::Publisher<hippo_msgs::msg::EscRpms>::SharedPtr esc_rpm_pub_;
 };
 
 int main(int argc, char **argv) {

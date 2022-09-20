@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 
 from esc import afro_esc
-from hippo_interfaces.msg import ActuatorControls, Float64Stamped
+from hippo_msgs.msg import ActuatorControls, Float64Stamped
 
 
 class ESC(Node):
