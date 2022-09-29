@@ -58,8 +58,8 @@ class ESC : public rclcpp::Node {
 
     actuator_controls_sub_ =
         create_subscription<hippo_msgs::msg::ActuatorControls>(
-            "thruster_controls", 10,
-            std::bind(&ESC::OnThrusterControls, this, _1));
+            "thruster_command", 10,
+            std::bind(&ESC::OnThrusterCommand, this, _1));
   }
   void OnTimeout() {
     RCLCPP_WARN(get_logger(), "Thruster controls timed out.");
@@ -93,7 +93,7 @@ class ESC : public rclcpp::Node {
     esc_voltage_pub_->publish(msg);
   }
 
-  void OnThrusterControls(
+  void OnThrusterCommand(
       const hippo_msgs::msg::ActuatorControls::SharedPtr msg) {
     control_timeout_timer_->reset();
     if (timed_out_) {
