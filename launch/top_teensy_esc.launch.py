@@ -26,7 +26,7 @@ def generate_launch_description():
 
     launch_includes = []
     # include teensy_esc node
-    path = str(package_path / 'launch/node_teensy_esc.launch.py')
+    path = str(package_path / 'launch/teensy_esc.launch.py')
     launch_arguments = {
         'serial_port': serial_port,
         'use_sim_time': use_sim_time,

@@ -29,7 +29,6 @@ def add_esc_node():
         executable='teensy_commander_node',
         package='esc',
         name='esc_commander',
-        namespace=LaunchConfiguration('vehicle_name'),
         parameters=[args, LaunchConfiguration('esc_config_file')],
         output='screen',
         emulate_tty=True,
