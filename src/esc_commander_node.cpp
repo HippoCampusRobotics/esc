@@ -120,7 +120,7 @@ class ESC : public rclcpp::Node {
         armed_ = _request->data;
         RCLCPP_INFO(get_logger(), "Arming the thrusters.");
         _response->message = "Armed";
-        _response->success = false;
+        _response->success = true;
         // sending zero throttle initially is required for the ESCs.
         SetThrottleAll(0.0);
         SendThrottle(true);
